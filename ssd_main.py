@@ -116,7 +116,7 @@ FLAGS = tf.flags.FLAGS
 SUCCESS = False
 
 
-def next_checkpoint(model_dir, timeout_mins=240):
+def next_checkpoint(model_dir, timeout_mins=1):
   """Yields successive checkpoints from model_dir."""
   last_ckpt = None
   last_step = 0
@@ -258,6 +258,7 @@ def coco_eval(predictions, current_epoch, current_step, summary_writer):
           'iteration': current_step,
           'value': eval_results['COCO/AP']
       })
+  print("The coco AP is: {}\n".format(eval_results['COCO/AP']))
   if eval_results['COCO/AP'] >= ssd_constants.EVAL_TARGET and not SUCCESS:
     mlperf_log.ssd_print(key=mlperf_log.RUN_STOP, value={'success': 'true'})
     mlperf_log.ssd_print(key=mlperf_log.RUN_FINAL)
@@ -279,7 +280,7 @@ def main(argv):
   print(FLAGS.model_dir)
   if FLAGS.model_dir: print(FLAGS.model_dir)
   else:
-    print(FLAGS.training_file_pattern) 
+    print(FLAGS.training_file_pattern)
     raise Exception('No model dir')
   # Check data path
   if FLAGS.mode in ('train',
@@ -332,6 +333,8 @@ def main(argv):
       trunner.shutdown()
     else:
       if FLAGS.device == 'gpu':
+        params['dataset_num_shards'] = 1
+        params['dataset_index'] = 0
         train_params = dict(params)
         train_params['batch_size'] = FLAGS.train_batch_size
         train_estimator = tf.estimator.Estimator(
@@ -351,10 +354,6 @@ def main(argv):
       mlperf_log.ssd_print(key=mlperf_log.TRAIN_LOOP)
       mlperf_log.ssd_print(key=mlperf_log.TRAIN_EPOCH, value=0)
       hooks = []
-
-      if FLAGS.model_dir: print("The model dir is : {}\n".format(FLAGS.model_dir))
-      else:
-          print("There is no model dir!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
 
       if FLAGS.use_async_checkpoint:
         hooks.append(
@@ -527,11 +526,15 @@ def main(argv):
     tf.logging.info('Eval epochs: %s' % eval_epochs)
     # Run evaluation when there's a new checkpoint
     threads = []
+    count = 1
     for ckpt in next_checkpoint(FLAGS.model_dir):
+      print("current count is {}\n".format(count))
+      count += 1
       if SUCCESS:
         break
       current_step = int(os.path.basename(ckpt).split('-')[1])
       current_epoch = current_step // params['steps_per_epoch']
+      tf.logging.info('current step: %s' % current_step)
       tf.logging.info('current epoch: %s' % current_epoch)
       if not params[
           'eval_every_checkpoint'] and current_epoch not in eval_epochs:

@@ -405,7 +405,7 @@ def _model_fn(features, labels, mode, params, model):
       train_op = tf.group(optimizer.minimize(total_loss, global_step),
                           update_ops)
       return model_fn_lib.EstimatorSpec(
-          mode=mode, loss=total_loss, train_op=train_op, scaffold=scaffold_fn())
+          mode=mode, loss=total_loss, train_op=train_op, scaffold=None)
     else:
       with tf.control_dependencies(update_ops):
         train_op = optimizer.minimize(total_loss, global_step)
@@ -496,7 +496,7 @@ def default_hparams():
 
       # TODO(taylorrobie): I don't respect this everywhere.
       # enable bfloat
-      use_bfloat16=True,
+      use_bfloat16=False,
       use_host_call=True,
       num_examples_per_epoch=120000,
       lr_warmup_epoch=1.0,
@@ -506,7 +506,7 @@ def default_hparams():
       base_learning_rate=ssd_constants.BASE_LEARNING_RATE,
       visualize_dataloader=False,
       distributed_group_size=1,
-      eval_every_checkpoint=False,
+      eval_every_checkpoint=True,
       transpose_input=True,
       train_with_low_level_api=False,
       eval_with_low_level_api=False,
